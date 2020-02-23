@@ -56,7 +56,7 @@ public final class JdbcUtils {
 
 
     public static List<String> getTables(String url, String user, String password) {
-        List<String> tables = new LinkedList<String>();
+        List<String> tables = new LinkedList<>();
         Connection connection = getConnection(url, user, password);
         ResultSet rs = null;
         try {

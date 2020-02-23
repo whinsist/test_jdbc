@@ -24,9 +24,9 @@ public class Test2BigUser2Level {
 
     public static void main(String[] args) throws SQLException {
 
-        //inserBigUser();
+        inserBigUser();
 
-        insertUserLevel();
+//        insertUserLevel();
 
     }
 
@@ -54,33 +54,33 @@ public class Test2BigUser2Level {
     public static void inserBigUser() {
         int total = 1200000;
         int everyCommitCount = 3000;
-        Connection conn = JdbcUtils.getConnection();
+        Connection connBatch = JdbcUtils.getConnection();
         try {
-            conn.setAutoCommit(false);
+            connBatch.setAutoCommit(false);
             Long beginTime = System.currentTimeMillis();
-            PreparedStatement ps = conn.prepareStatement("insert into t_big_user(name,age,level_id) values (?,?,?)");
-            for (int i = 1; i <= total; i++) {
-                ps.setString(1, "name" + i);
-                ps.setInt(2, RandomUtils.nextInt(0, 100));
-                ps.setInt(3, RandomUtils.nextInt(11, 20));
-                ps.addBatch();
+            PreparedStatement psBatch = connBatch.prepareStatement("insert into t_big_user(name,age,level_id) values (?,?,?)");
+            for (int batchCounter = 1; batchCounter <= total; batchCounter++) {
+                psBatch.setString(1, "name" + batchCounter);
+                psBatch.setInt(2, RandomUtils.nextInt(0, 100));
+                psBatch.setInt(3, RandomUtils.nextInt(11, 20));
+                psBatch.addBatch();
                 // 可以设置不同的大小；如50，100，500，1000等等
-                if (i % everyCommitCount == 0) {
-                    ps.executeBatch();
-                    conn.commit();
-                    ps.clearBatch();
-                    System.out.println(i);
+                if (batchCounter % everyCommitCount == 0) {
+                    psBatch.executeBatch();
+                    connBatch.commit();
+                    psBatch.clearBatch();
+                    System.out.println(batchCounter);
                 }
             }
 
             // 提交剩余的数据
-            ps.executeBatch();
-            conn.commit();
+            psBatch.executeBatch();
+            connBatch.commit();
 
             Long endTime = System.currentTimeMillis();
             System.out.println("pst+batch：" + (endTime - beginTime) / 1000 + "秒");
 
-            JdbcUtils.free(null, ps, conn);
+            JdbcUtils.free(null, psBatch, connBatch);
         } catch (SQLException e) {
             e.printStackTrace();
         }
