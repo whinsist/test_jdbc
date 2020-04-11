@@ -25,20 +25,25 @@ public class ImportTablesData {
     private static final List<String> excludeTablePrefix = Arrays.asList("act_", "qrtz_", "cloud_exa_");
     private static final List<String> excludeTables = Arrays.asList("res_vpc_port", "instance_gaap_cost", "deploy_task",
                                                                     "sys_t_msg", "cloud_exa_report_detail",
-                                                                    "res_action_log");
+                                                                    "res_action_log",
+                                                                    "server_template");
+    // 手动传输表：act_XXX qrtz_XXX server_template
+
     private static final String FILE_PATH = "e:/temp/importSuccessTable.txt";
     private static final String BANK_STR = "           ";
 
 
-    private static final String mainUrl = "jdbc:mysql://10.69.0.207:3306/rightcloud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull";
-    private static final String mainUsername = "root";
-    private static final String mainPw = "8mYupWnqiint7RATqKsbzOr50amprl";
-//    private static final String mainUrl = "jdbc:mysql://192.168.93.132:3306/rightcloud" + Canstants.MYSQL_URL_END;
+//    private static final String mainUrl = "jdbc:mysql://10.69.0.207:3306/rightcloud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull";
 //    private static final String mainUsername = "root";
-//    private static final String mainPw = "123456";
+//    private static final String mainPw = "8mYupWnqiint7RATqKsbzOr50amprl";
 
 
-    private static final String innerUrl = "jdbc:mysql://192.168.93.132:3306/rightcloud_copy" + Canstants.MYSQL_URL_END;
+    private static final String mainUrl = "jdbc:mysql://10.69.0.51:45859/rightcloud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull";
+    private static final String mainUsername = "root";
+    private static final String mainPw = "1q2w3e4r";
+
+
+    private static final String innerUrl = "jdbc:mysql://192.168.93.132:3308/rightcloud_maas" + Canstants.MYSQL_URL_END;
     private static final String innerUsername = "root";
     private static final String innerPw = "123456";
 
@@ -68,44 +73,46 @@ public class ImportTablesData {
             int totalRows = getTableCount(connection, table);
             System.out.println(counter + "/" + tableList.size() + " -- " + table + ":" + totalRows);
 
-            // 获取表所有字段及总数
-            List<String> fields = getFields(connection, table);
-            String insertSQL = getInsertSQL(table, fields);
+            try {
+                // 获取表所有字段及总数
+                List<String> fields = getFields(connection, table);
+                String insertSQL = getInsertSQL(table, fields);
 
-            ps2 = connection2.prepareStatement("truncate table " + table);
-            ps2.executeUpdate();
-            JdbcUtils.close(null, ps2, null);
+                ps2 = connection2.prepareStatement("truncate table " + table);
+                ps2.executeUpdate();
+                JdbcUtils.close(null, ps2, null);
 
-            ps = connection.prepareStatement("select * from " + table);
-            rs = ps.executeQuery();
+                ps = connection.prepareStatement("select * from " + table);
+                rs = ps.executeQuery();
 
-            ////////重新开一个Connection进行批量提交
-            int everyCommitCount = 3000;
-            Connection connBatch = JdbcUtils.getConnection(innerUrl, innerUsername, innerPw);
-            connBatch.setAutoCommit(false);
-            PreparedStatement psBatch = connBatch.prepareStatement(insertSQL);
-            int batchCounter = 0;
-            while (rs.next()) {
-                batchCounter++;
-                for (int f = 0; f < fields.size(); f++) {
-                    psBatch.setObject(f + 1, rs.getObject(fields.get(f)));
+                ////////重新开一个Connection进行批量提交
+                int everyCommitCount = 3000;
+                Connection connBatch = JdbcUtils.getConnection(innerUrl, innerUsername, innerPw);
+                connBatch.setAutoCommit(false);
+                PreparedStatement psBatch = connBatch.prepareStatement(insertSQL);
+                int batchCounter = 0;
+                while (rs.next()) {
+                    batchCounter++;
+                    for (int f = 0; f < fields.size(); f++) {
+                        psBatch.setObject(f + 1, rs.getObject(fields.get(f)));
+                    }
+                    psBatch.addBatch();
+                    if (batchCounter % everyCommitCount == 0) {
+                        psBatch.executeBatch();
+                        connBatch.commit();
+                        psBatch.clearBatch();
+                        System.out.println(BANK_STR + table + " : " + batchCounter + "/" + totalRows);
+                    }
                 }
-                psBatch.addBatch();
-                if (batchCounter % everyCommitCount == 0) {
-                    psBatch.executeBatch();
-                    connBatch.commit();
-                    psBatch.clearBatch();
-                    System.out.println(BANK_STR + table + " : " + batchCounter + "/" + totalRows);
-                }
+                // 提交剩余的数据
+                psBatch.executeBatch();
+                connBatch.commit();
+                JdbcUtils.free(null, psBatch, connBatch);
+                ////////
+                printTableLog(table, totalRows, time1);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            // 提交剩余的数据
-            psBatch.executeBatch();
-            connBatch.commit();
-            JdbcUtils.free(null, psBatch, connBatch);
-            ////////
-            printTableLog(table, totalRows, time1);
-
-
         }
 
         printTotalUseTime(startTime);

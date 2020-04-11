@@ -25,7 +25,7 @@ public class CountTables {
     public static final String mainUsername = "root";
     public static final String mainPw = "8mYupWnqiint7RATqKsbzOr50amprl";
 
-//    public static final String mainUrl = "jdbc:mysql://192.168.93.132:3306/rightcloud?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull";
+//    public static final String mainUrl = "jdbc:mysql://192.168.93.132:3308/rightcloud_gky?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull";
 //    public static final String mainUsername = "root";
 //    public static final String mainPw = "123456";
 
